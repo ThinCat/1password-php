@@ -3,7 +3,8 @@
 error_reporting(0);
 set_error_handler("pwd_error_handler");
 
-define('BASE_PATH', str_replace('\\', DIRECTORY_SEPARATOR, __DIR__));
+define('BASE_PATH', str_replace('\\', '/', __DIR__));
+define('IS_WINDOWS', stripos(PHP_OS, 'win') !== false);
 
 const DB_PATH = BASE_PATH . '/pwd.db';
 const LOG_PATH = BASE_PATH . '/error.log';
@@ -284,9 +285,9 @@ function change_password()
 {
     global $key, $sqlite, $preset_auth_str;
     echo 'Enter new password: ';
-    system('stty -echo');
+    if (!IS_WINDOWS) system('stty -echo');
     $new_password = trim(fgets(STDIN));
-    system('stty echo');
+    if (!IS_WINDOWS) system('stty echo');
 
     echo "\r\nUpdate all passwords...\r\n";
 
@@ -346,7 +347,7 @@ function login()
     } else {
         echo "Enter password: ";
     }
-    system('stty -echo');
+    if (!IS_WINDOWS) system('stty -echo');
     $passwd = trim(fgets(STDIN));
     $iv = substr(md5(sprintf('%u', crc32($passwd))), 0, openssl_cipher_iv_length('aes-256-cbc'));
     if ($auth_str == $preset_auth_str) {
@@ -356,15 +357,15 @@ function login()
         echo "\r\n\r\nYour login password is {$passwd}, please note it down.\r\n";
     } else {
         while ($auth_str != encrypt($preset_auth_str, md5($passwd), $iv)) {
-            system('stty echo');
+            if (!IS_WINDOWS) system('stty echo');
             echo "\r\nPassword error!\r\n";
             echo "Enter password: ";
-            system('stty -echo');
+            if (!IS_WINDOWS) system('stty -echo');
             $passwd = trim(fgets(STDIN));
             $iv = substr(md5(sprintf('%u', crc32($passwd))), 0, openssl_cipher_iv_length('aes-256-cbc'));
         }
     }
-    system('stty echo');
+    if (!IS_WINDOWS) system('stty echo');
     $key = base64_encode(md5($passwd));
     $is_login = true;
     help();
@@ -465,7 +466,7 @@ function mb_str_pad($input, $pad_length, $pad_string = ' ', $pad_type = STR_PAD_
  */
 function back_color($str)
 {
-	return "\033[48;5;12m" . $str . "\033[0m";
+    return IS_WINDOWS ? $str : "\033[48;5;12m" . $str . "\033[0m";
 }
 
 /**
