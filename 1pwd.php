@@ -6,18 +6,22 @@ set_error_handler("pwd_error_handler");
 define('BASE_PATH', str_replace('\\', '/', __DIR__));
 define('IS_WINDOWS', stripos(PHP_OS, 'win') !== false);
 
-const DB_PATH = BASE_PATH . '/pwd.db';
-const LOG_PATH = BASE_PATH . '/error.log';
+define('DB_PATH', BASE_PATH . '/pwd.db');
+define('LOG_PATH', BASE_PATH . '/error.log');
 
-if (!file_exists(DB_PATH)) {
-    exit('Db file not found.');
-}
+define('PRESET_AUTH_STR', '1pwd_auth_chars');
 
 $sqlite = new SQLite3(DB_PATH);
 
-$key = '';
+if (!file_exists(DB_PATH)) {
+    exit('Db file not found, check your path if is writeable or not.');
+}
 
-$preset_auth_str = '1pwd_auth_chars';
+require_once("migration.php");
+
+check_and_migrate($sqlite);
+
+$key = '';
 
 $is_login = false;
 
@@ -283,7 +287,7 @@ function search_password()
  */
 function change_password()
 {
-    global $key, $sqlite, $preset_auth_str;
+    global $key, $sqlite;
     echo 'Enter new password: ';
     if (!IS_WINDOWS) system('stty -echo');
     $new_password = trim(fgets(STDIN));
@@ -304,7 +308,7 @@ function change_password()
     echo "Update login password...\r\n";
 
     $iv = substr(md5(sprintf('%u', crc32($new_password))), 0, openssl_cipher_iv_length('aes-256-cbc'));
-    $auth_passwd = encrypt($preset_auth_str, md5($new_password), $iv);
+    $auth_passwd = encrypt(PRESET_AUTH_STR, md5($new_password), $iv);
     $sql = "UPDATE auth SET auth_chars = '{$auth_passwd}' WHERE name = 'admin'";
     $sqlite->exec($sql);
 
@@ -338,11 +342,11 @@ function decrypt($data, $key, $set_iv = false) {
  */
 function login()
 {
-    global $sqlite, $key, $is_login, $preset_auth_str;
+    global $sqlite, $key, $is_login;
     $sql = "SELECT auth_chars FROM auth WHERE name = 'admin' LIMIT 1";
     $result = $sqlite->query($sql)->fetchArray();
     $auth_str = isset($result['auth_chars']) ? trim($result['auth_chars']) : '';
-    if ($auth_str == $preset_auth_str) {
+    if ($auth_str == PRESET_AUTH_STR) {
         echo "You haven't setup the login password yet, please enter your login password: ";
     } else {
         echo "Enter password: ";
@@ -350,13 +354,13 @@ function login()
     if (!IS_WINDOWS) system('stty -echo');
     $passwd = trim(fgets(STDIN));
     $iv = substr(md5(sprintf('%u', crc32($passwd))), 0, openssl_cipher_iv_length('aes-256-cbc'));
-    if ($auth_str == $preset_auth_str) {
-        $auth_passwd = encrypt($preset_auth_str, md5($passwd), $iv);
+    if ($auth_str == PRESET_AUTH_STR) {
+        $auth_passwd = encrypt(PRESET_AUTH_STR, md5($passwd), $iv);
         $sql = "UPDATE auth SET auth_chars = '{$auth_passwd}' WHERE name = 'admin'";
         $sqlite->exec($sql);
         echo "\r\n\r\nYour login password is {$passwd}, please note it down.\r\n";
     } else {
-        while ($auth_str != encrypt($preset_auth_str, md5($passwd), $iv)) {
+        while ($auth_str != encrypt(PRESET_AUTH_STR, md5($passwd), $iv)) {
             if (!IS_WINDOWS) system('stty echo');
             echo "\r\nPassword error!\r\n";
             echo "Enter password: ";
