@@ -17,9 +17,7 @@ _SQL_;
 /**
  * Preset default auth string
  */
-const AUTH_DEFAULT_SQL = <<< _SQL_
-INSERT INTO "auth" (`name`, `auth_chars`) VALUES ('admin', '1pwd_auth_chars');
-_SQL_;
+const AUTH_DEFAULT_SQL = "INSERT INTO \"auth\" (`name`, `auth_chars`) VALUES ('admin', '".PRESET_AUTH_STR."');";
 
 /**
  * Table where account and passwords save to
