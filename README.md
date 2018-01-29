@@ -5,7 +5,7 @@
 
 
 # Requirement
-PHP 5.3+ with SQLite3 and openSSL
+PHP 5.3+ with SQLite3 and openSSL extension
 
 # License
 MIT
